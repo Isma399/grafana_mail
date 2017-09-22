@@ -96,7 +96,7 @@ def send(msgRoot, strTo, mailhost):
 
 def attach_img(msgRoot, panelId):
     fp = open('./img' + panelId + '.png', 'rb')
-    msgImage = MIMEImage(fp.read())
+    msgImage = MIMEImage(fp.read(), _subtype="png")
     fp.close()
     msgImage.add_header('Content-ID', panelId)
     msgRoot.attach(msgImage)

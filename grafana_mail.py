@@ -134,10 +134,19 @@ if __name__ == '__main__':
         download(panelId, last_day()[0], last_day()[1], args.grafana_server, args.api_token)
     msgRoot = prepare()
 
-    msgStr = ''
+    msgStr = """
+This is Grafana Mail,
+
+This is the daily Report of the latest grafana graphs as rendered images.
+
+Best Regards,
+The Grafana Mail
+
+
+"""
     msgAlternative = MIMEMultipart('alternative')
     msgRoot.attach(msgAlternative)
-    msgText = MIMEText('Grafana Reports.')
+    msgText = MIMEText(msgStr)
     msgAlternative.attach(msgText)
 
     for panelId in args.panel_list:
@@ -146,7 +155,7 @@ if __name__ == '__main__':
         else:
             img_name = 'img_' + panelId[0] + '-' + panelId[1]
         msgStr += '<img src="cid:' + img_name + '"><br>'
-    msgText = MIMEText(msgStr, 'html')
+    msgText = MIMEText(msgStr.replace('\n', '<br />'), 'html')
     msgAlternative.attach(msgText)
 
     for panelId in args.panel_list:

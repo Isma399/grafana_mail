@@ -37,6 +37,10 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Return aliases of all the subscribers of a list.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-f", "--mail_from",
+                    dest="mail_from",
+                    help="Mail from address.",
+                    required=False)
     parser.add_argument("-m", "--mail_list",
                     dest="mail_list",
                     nargs='+', type=mail_type,
@@ -134,7 +138,10 @@ def attach_img(msgRoot, panelId, dashboard):
 
 if __name__ == '__main__':
     args = parse_args()
-    strFrom = socket.getfqdn()
+    if args.mail_from:
+        strFrom = args.mail_from
+    else:
+        strFrom = socket.getfqdn()
      
     for panelId in args.panel_list:
         download(panelId, last_day()[0], last_day()[1], args.grafana_server, args.api_token)

@@ -27,7 +27,9 @@ def panel_type(s):
             print "PanelId must be an integer." 
         return x, panelId            
     except:
-         raise argparse.ArgumentTypeError("Every panel must be <str>dashboard,<int>panelId")
+         #raise argparse.ArgumentTypeError("Every panel must be <str>dashboard,<int>panelId")
+         print "Render complete dashboard."
+    return s, None
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -51,6 +53,10 @@ def parse_args():
                     nargs='+', type=panel_type,
                     help="Tuple of Grafana dashboard Id and panelId, every tuple has to be separated by a space, ex ('test', 1) ('dashboard2', 15) ...",
                     required=True)   
+    parser.add_argument("-T", "--api_token",
+                    dest="api_token", type=str,
+                    help="Grafana API Token to access the dashboard.",
+                    required=True)
     return parser.parse_args()
 
 def last_day():
@@ -63,16 +69,27 @@ def last_day():
     return str(yesterday_mid), str(midnight)
 
 
-def download(panelId, begin_date, end_date, grafana_server):
-    url = (grafana_server + '/render/dashboard-solo/db/' +
-           panelId[0] + '?from=' +
-           begin_date + '&to=' + end_date + '&panelId=' + panelId[1] +
-           '&width=1700&height=500'
-           )
+def download(panelId, begin_date, end_date, grafana_server, api_token):
+    if panelId[1] == None:
+        url = (grafana_server + '/render/dashboard/db/' +
+               panelId[0] + '?from=' +
+               begin_date + '&to=' + end_date +
+               '&width=1700&height=500'
+               )
+    else:
+        url = (grafana_server + '/render/dashboard-solo/db/' +
+               panelId[0] + '?from=' +
+               begin_date + '&to=' + end_date + '&panelId=' + panelId[1] +
+               '&width=1700&height=500'
+               )
     print url
-    r = requests.get(url, stream=True)
+    r = requests.get(url, headers={"Authorization": "Bearer " + api_token}, stream=True)
     if r.status_code == 200:
-        with open('./img' + panelId[1] + '.png', 'wb') as picture:
+        if panelId[1] == None:
+            img_file = 'img_' + panelId[0] + '.png'
+        else:
+            img_file = 'img_' + panelId[0] + '-' + panelId[1] + '.png'
+        with open('./' + img_file, 'wb') as picture:
             r.raw.decode_content = True
             shutil.copyfileobj(r.raw, picture)
     del r
@@ -94,11 +111,18 @@ def send(msgRoot, strTo, mailhost):
     smtp.quit()
 
 
-def attach_img(msgRoot, panelId):
-    fp = open('./img' + panelId + '.png', 'rb')
+def attach_img(msgRoot, panelId, dashboard):
+    global msgStr
+    if panelId == None:
+        img_name = 'img_' + dashboard
+    else:
+        img_name = 'img_' + dashboard + '-' + panelId
+    fp = open('./' + img_name + '.png', 'rb')
     msgImage = MIMEImage(fp.read(), _subtype="png")
     fp.close()
-    msgImage.add_header('Content-ID', panelId)
+    #for panelId in args.panel_list:
+    #    msgStr += '<img src="cid:' + img_name + '"><br>'
+    msgImage.add_header('Content-ID', '<' + img_name + '>')
     msgRoot.attach(msgImage)
 
 
@@ -107,25 +131,34 @@ if __name__ == '__main__':
     strFrom = socket.getfqdn()
      
     for panelId in args.panel_list:
-        download(panelId, last_day()[0], last_day()[1], args.grafana_server)
+        download(panelId, last_day()[0], last_day()[1], args.grafana_server, args.api_token)
     msgRoot = prepare()
 
+    msgStr = ''
     msgAlternative = MIMEMultipart('alternative')
     msgRoot.attach(msgAlternative)
     msgText = MIMEText('Grafana Reports.')
     msgAlternative.attach(msgText)
 
-    msgStr = ''
     for panelId in args.panel_list:
-        msgStr += '<img src="cid:' + panelId[1] + '"><br>'
+        if panelId[1] == None:
+            img_name = 'img_' + panelId[0]
+        else:
+            img_name = 'img_' + panelId[0] + '-' + panelId[1]
+        msgStr += '<img src="cid:' + img_name + '"><br>'
     msgText = MIMEText(msgStr, 'html')
     msgAlternative.attach(msgText)
 
     for panelId in args.panel_list:
-        attach_img(msgRoot, panelId[1])
+        attach_img(msgRoot, panelId[1], panelId[0])
     
     for mail in args.mail_list:
         send(msgRoot, mail, args.mailhost)
 
     for panelId in args.panel_list:
-        os.remove('./img' + panelId[1] + '.png')
+        if panelId[1] == None:
+            img_name = 'img_' + panelId[0]
+        else:
+            img_name = 'img_' + panelId[0] + '-' + panelId[1]
+        os.remove('./' + img_name + '.png')
+

@@ -98,13 +98,13 @@ def download(panelId, begin_date, end_date, grafana_server, api_token):
 def prepare():
     msgRoot = MIMEMultipart('related')
     msgRoot['Subject'] = 'Grafana Reports.'
-    msgRoot['From'] = strFrom
+    msgRoot['From'] = '<' + strFrom + '>'
     msgRoot.preamble = 'This is a multi-part message in MIME format.'
     return msgRoot
 
 
 def send(msgRoot, strTo, mailhost):
-    msgRoot['To'] = strTo
+    msgRoot['To'] = '<' + strTo + '>'
     smtp = smtplib.SMTP()
     smtp.connect(mailhost)
     smtp.sendmail(strFrom, strTo, msgRoot.as_string())

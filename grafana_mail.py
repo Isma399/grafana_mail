@@ -3,6 +3,7 @@
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.MIMEImage import MIMEImage
+from email.utils import formatdate
 import smtplib
 from datetime import datetime, date, time, timedelta
 import requests
@@ -11,6 +12,7 @@ import os
 import argparse
 import socket
 import re
+import binascii
 
 
 def mail_type(s):
@@ -99,6 +101,9 @@ def prepare():
     msgRoot = MIMEMultipart('related')
     msgRoot['Subject'] = 'Grafana Reports.'
     msgRoot['From'] = '<' + strFrom + '>'
+    msgRoot['Date'] = formatdate()
+    msgRoot['Message-ID'] = '<' + binascii.b2a_hex(os.urandom(15)) + '@' + strFrom + '>'
+    print msgRoot['Message-ID']
     msgRoot.preamble = 'This is a multi-part message in MIME format.'
     return msgRoot
 
@@ -123,6 +128,7 @@ def attach_img(msgRoot, panelId, dashboard):
     #for panelId in args.panel_list:
     #    msgStr += '<img src="cid:' + img_name + '"><br>'
     msgImage.add_header('Content-ID', '<' + img_name + '>')
+    msgImage.add_header('Content-Disposition', 'attachment;filename="' + img_name + '.png"')
     msgRoot.attach(msgImage)
 
 

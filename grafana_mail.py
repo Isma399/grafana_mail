@@ -14,7 +14,6 @@ import socket
 import re
 import binascii
 
-
 def mail_type(s):
     if not re.match(r"[^@^\s]+@[^@^\s]+\.[^@\s]+", s):
          raise argparse.ArgumentTypeError('The mail is not a valid email')
@@ -48,11 +47,11 @@ def parse_args():
                     required=True)
     parser.add_argument("-M", "--mailhost",
                     dest="mailhost", type=str,
-                    help="Mailhost hostname or IP.",
+                    help="Mailhost hostname or IP or just in simple: localhost",
                     required=True)
     parser.add_argument("-G", "--grafana_server",
                     dest="grafana_server",
-                    help="Grafana server & port, ex: http://grafana.test:3000",
+                    help="Grafana server & port, ex: http://grafana.test:3000 or http://localhost:3000",
                     required=True)
     parser.add_argument("-P", "--panel_list",
                     dest="panel_list",
@@ -63,7 +62,15 @@ def parse_args():
                     dest="api_token", type=str,
                     help="Grafana API Token to access the dashboard.",
                     required=True)
-    return parser.parse_args()
+    parser.add_argument("-W", "--img_width",
+                    dest="img_width", type=str,
+                    help="Width size of image.",
+                    required=True)
+    parser.add_argument("-H", "--img_height",
+                    dest="img_height", type=str,
+                    help="Height size of image.",
+                    required=True)
+        return parser.parse_args()
 
 def last_day():
     midnight = datetime.combine(date.today(), time.min)
@@ -74,19 +81,18 @@ def last_day():
     yesterday_mid = int((yesterday_mid - epoch).total_seconds() * 1000.0)
     return str(yesterday_mid), str(midnight)
 
-
-def download(panelId, begin_date, end_date, grafana_server, api_token):
+def download(panelId, begin_date, end_date, grafana_server, api_token, img_width, img_height):
     if panelId[1] == None:
         url = (grafana_server + '/render/dashboard/db/' +
                panelId[0] + '?from=' +
                begin_date + '&to=' + end_date +
-               '&width=1700&height=500'
+               '&width=' + img_width + '&height=' + img_height
                )
     else:
         url = (grafana_server + '/render/dashboard-solo/db/' +
                panelId[0] + '?from=' +
                begin_date + '&to=' + end_date + '&panelId=' + panelId[1] +
-               '&width=1700&height=500'
+               '&width=' + img_width + '&height=' + img_height
                )
     print url
     r = requests.get(url, headers={"Authorization": "Bearer " + api_token}, stream=True)
@@ -100,7 +106,6 @@ def download(panelId, begin_date, end_date, grafana_server, api_token):
             shutil.copyfileobj(r.raw, picture)
     del r
 
-
 def prepare():
     msgRoot = MIMEMultipart('related')
     msgRoot['Subject'] = 'Grafana Reports.'
@@ -111,14 +116,12 @@ def prepare():
     msgRoot.preamble = 'This is a multi-part message in MIME format.'
     return msgRoot
 
-
 def send(msgRoot, strTo, mailhost):
     msgRoot['To'] = '<' + strTo + '>'
     smtp = smtplib.SMTP()
     smtp.connect(mailhost)
     smtp.sendmail(strFrom, strTo, msgRoot.as_string())
     smtp.quit()
-
 
 def attach_img(msgRoot, panelId, dashboard):
     global msgStr
@@ -135,7 +138,6 @@ def attach_img(msgRoot, panelId, dashboard):
     msgImage.add_header('Content-Disposition', 'attachment;filename="' + img_name + '.png"')
     msgRoot.attach(msgImage)
 
-
 if __name__ == '__main__':
     args = parse_args()
     if args.mail_from:
@@ -144,17 +146,13 @@ if __name__ == '__main__':
         strFrom = socket.getfqdn()
      
     for panelId in args.panel_list:
-        download(panelId, last_day()[0], last_day()[1], args.grafana_server, args.api_token)
+        download(panelId, last_day()[0], last_day()[1], args.grafana_server, args.api_token, args.img_width, args.img_height)
     msgRoot = prepare()
 
     msgStr = """
-This is Grafana Mail,
+Hi,
 
-This is the daily Report of the latest grafana graphs as rendered images.
-
-Best Regards,
-The Grafana Mail
-
+This is Grafana Mail.
 
 """
     msgAlternative = MIMEMultipart('alternative')
@@ -167,7 +165,7 @@ The Grafana Mail
             img_name = 'img_' + panelId[0]
         else:
             img_name = 'img_' + panelId[0] + '-' + panelId[1]
-        msgStr += '<img src="cid:' + img_name + '"><br>'
+        msgStr += '<img src="cid:' + img_name + '"> '
     msgText = MIMEText(msgStr.replace('\n', '<br />'), 'html')
     msgAlternative.attach(msgText)
 

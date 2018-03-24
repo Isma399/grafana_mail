@@ -81,7 +81,6 @@ def last_day():
     yesterday_mid = int((yesterday_mid - epoch).total_seconds() * 1000.0)
     return str(yesterday_mid), str(midnight)
 
-
 def download(panelId, begin_date, end_date, grafana_server, api_token, img_width, img_height):
     if panelId[1] == None:
         url = (grafana_server + '/render/dashboard/db/' +
@@ -107,7 +106,6 @@ def download(panelId, begin_date, end_date, grafana_server, api_token, img_width
             shutil.copyfileobj(r.raw, picture)
     del r
 
-
 def prepare():
     msgRoot = MIMEMultipart('related')
     msgRoot['Subject'] = 'Grafana Reports.'
@@ -118,14 +116,12 @@ def prepare():
     msgRoot.preamble = 'This is a multi-part message in MIME format.'
     return msgRoot
 
-
 def send(msgRoot, strTo, mailhost):
     msgRoot['To'] = '<' + strTo + '>'
     smtp = smtplib.SMTP()
     smtp.connect(mailhost)
     smtp.sendmail(strFrom, strTo, msgRoot.as_string())
     smtp.quit()
-
 
 def attach_img(msgRoot, panelId, dashboard):
     global msgStr
@@ -141,7 +137,6 @@ def attach_img(msgRoot, panelId, dashboard):
     msgImage.add_header('Content-ID', '<' + img_name + '>')
     msgImage.add_header('Content-Disposition', 'attachment;filename="' + img_name + '.png"')
     msgRoot.attach(msgImage)
-
 
 if __name__ == '__main__':
     args = parse_args()

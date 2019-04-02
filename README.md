@@ -15,3 +15,6 @@ Updated for Python 3.6 and Grafana 5.3.4
 
 **Uber-shortcut**: Don't specify panel_list, but include at least a dashId.  Script will fetch all panels on dashboard
 `./grafana_mail.py -m mail1@domain.test mail2@domain.test -M mailhost.domain.test -G http://garfana.domain.test:3000 -T <Grafana API key> -D 123`
+
+
+**Lience**: GNU General Public License v3.0
